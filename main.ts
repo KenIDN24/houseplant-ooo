@@ -6,6 +6,13 @@
 // line, not only whitespace. The file is written byte-for-byte
 // identical to the in-memory line and verified by a round-trip read
 // before exit.
+//
+// Guard additions (revisi): the entry is built as exactly two
+// sentences — the setup sentence plus the twist sentence — so the
+// guard also requires exactly two terminal periods and no other
+// sentence-ending punctuation, locking the two-beat structure the
+// QA picked. Internal double spaces and tabs are rejected too (the
+// previous guard only caught leading/trailing whitespace).
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -45,6 +52,24 @@ function main(): void {
   }
   if (LINE.includes("\n") || LINE.includes("\r")) {
     throw new Error("entry must be a single line");
+  }
+  if (LINE.includes("  ") || LINE.includes("\t")) {
+    throw new Error("entry must not contain double spaces or tabs");
+  }
+  // Exactly two sentences: the setup + the twist. Two terminal
+  // periods, no other sentence-ending punctuation anywhere.
+  const periods = (LINE.match(/\./g) ?? []).length;
+  if (periods !== 2) {
+    throw new Error(`entry must be exactly two sentences, got ${periods} periods`);
+  }
+  // Split check: the two periods must actually separate two
+  // non-empty sentences (catches ".." or a period inside a word).
+  const sentences = LINE.split(". ");
+  if (sentences.length !== 2 || sentences.some((s) => s.trim().length === 0)) {
+    throw new Error("entry must split into exactly two non-empty sentences");
+  }
+  if (LINE.includes("!") || LINE.includes("?")) {
+    throw new Error("entry must end its sentences with periods only");
   }
 
   const outDir = process.env.OUTPUT_DIR ?? "/output";
